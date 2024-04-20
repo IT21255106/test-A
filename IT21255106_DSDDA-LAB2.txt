@@ -1,0 +1,120 @@
+--a)
+---craete objects
+
+CREATE TYPE dept_t /
+
+CREATE TYPE Emp_t AS OBJECT(
+  eno NUMBER(4),
+  ename VARCHAR(15),
+  edept REF dept_t,
+  salary NUMBER(8,2)
+)
+/
+
+CREATE TYPE Dept_t AS OBJECT(
+ dno NUMBER(2),
+ dname VARCHAR2(12),
+ mgr REF emp_t
+)
+/
+
+CREATE TYPE Proj_t AS OBJECT(
+ pno NUMBER(4),
+ pname VARCHAR2(15),
+ pdept REF dept_t,
+budget NUMBER(10,2)
+)
+/
+
+-- create tables
+
+CREATE TABLE EMP OF Emp_t(
+ eno PRIMARY KEY
+)
+/
+
+
+CREATE TABLE Dept OF Dept_t(
+ dno PRIMARY KEY,
+ mgr REFERENCES Emp
+)
+/
+
+ALTER TABLE EMP
+ADD CONSTRAINT fk_emp_dept
+FOREIGN KEY (edept)
+REFERENCES Dept
+
+/
+
+CREATE TABLE Proj OF Proj_t(
+ pno PRIMARY KEY,
+ pdept REFERENCES Dept
+)
+/
+
+--b)
+-- Insert sample data
+INSERT INTO Dept VALUES (1, 'HR', (SELECT REF(e) FROM Emp e WHERE e.eno = 101))/
+INSERT INTO Dept VALUES (2, 'IT', (SELECT REF(e) FROM Emp e WHERE e.eno = 201))/
+
+INSERT INTO Proj VALUES (1001, 'ProjectA', (SELECT REF(d) FROM Dept d WHERE d.dno = 1), 75000.50)/
+INSERT INTO Proj VALUES (1002, 'ProjectB', (SELECT REF(d) FROM Dept d WHERE d.dno = 2), 60000.75)/
+
+INSERT INTO Emp VALUES (101, 'Rebeca Fonseka', (SELECT REF(d) FROM Dept d WHERE d.dno = 1), 55000.00)/
+INSERT INTO Emp VALUES (201, 'John Decker', (SELECT REF(d) FROM Dept d WHERE d.dno = 2), 70000.00)/
+
+
+-- (c) Find Name and Salary of Managers
+
+SELECT d.dno, e.ename AS manager_name, e.salary
+FROM Dept d
+JOIN Emp e ON DEREF(d.mgr) = e;
+/
+
+-- (d) Projects with Budgets Over $50000
+
+SELECT p.pname, e.ename AS manager_name
+FROM Proj p
+JOIN Dept d ON DEREF(p.pdept) = d
+JOIN Emp e ON DEREF(d.mgr) = e
+WHERE p.budget > 50000;
+/
+
+-- (e) Departments In Charge of Projects
+SELECT d.dno, d.dname, SUM(p.budget) AS total_budget
+FROM Dept d
+JOIN Proj p ON DEREF(d) = DEREF(p.pdept)
+GROUP BY d.dno, d.dname;
+/
+
+-- (f) Manager Controlling Project with Largest Budget
+
+SELECT e.ename AS manager_name
+FROM Emp e
+JOIN Dept d ON DEREF(e) = DEREF(d.mgr)
+JOIN Proj p ON DEREF(d) = DEREF(p.pdept)
+ORDER BY p.budget DESC
+FETCH FIRST ROW ONLY;
+/
+
+-- (g) Managers Controlling Budget Above $60,000
+
+SELECT e.eno, e.ename, SUM(p.budget) AS total_controlling_budget
+FROM Emp e
+JOIN Dept d ON DEREF(e) = DEREF(d.mgr)
+JOIN Proj p ON DEREF(d) = DEREF(p.pdept)
+GROUP BY e.eno, e.ename
+HAVING SUM(p.budget) > 60000;
+/
+
+-- (h) Manager Controlling Largest Amount
+
+SELECT e.eno, SUM(p.budget) AS total_controlling_budget
+FROM Emp e
+JOIN Dept d ON DEREF(e) = DEREF(d.mgr)
+JOIN Proj p ON DEREF(d) = DEREF(p.pdept)
+GROUP BY e.eno
+ORDER BY total_controlling_budget DESC
+FETCH FIRST ROW ONLY;
+/

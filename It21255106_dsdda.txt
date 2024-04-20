@@ -1,0 +1,88 @@
+create type Dept_t
+
+CREATE TYPE Emp_t AS OBJECT (
+    eno NUMBER(4),
+    ename VARCHAR2(15),
+    edept REF Dept_t,
+    salary NUMBER(8,2)
+);
+
+CREATE TYPE Dept_t AS OBJECT (
+    dno NUMBER(2),
+    dname VARCHAR2(12),
+    mgr REF Emp_t
+);
+
+CREATE TYPE Proj_t AS OBJECT (
+    pno NUMBER(4),
+    pname VARCHAR2(15),
+    pdept REF Dept_t,
+    budget NUMBER(10,2)
+);
+
+
+create table Emp of emp_t(
+	constraint tblemp_primarykey PRIMARY KEY(eno)
+    )
+/
+
+create table Dept of Dept_t(
+	constraint tbldept_primarykey PRIMARY KEY(dno)  
+)
+/
+
+create table Proj of Proj_t(
+    constraint tblprob_primarykey PRIMARY KEY(pno)
+)
+/
+
+
+INSERT INTO Dept VALUES(Dept_t(10,'Planning',NULL));
+INSERT INTO Dept VALUES(Dept_t(11,'IT',NULL));
+INSERT INTO Dept VALUES(Dept_t(12,'Accounts',NULL));
+
+INSERT INTO Emp VALUES(Emp_t(1000,'Christine',(SELECT REF(d.dname) FROM Dept d WHERE d.dno=10),72750));
+INSERT INTO Emp VALUES(Emp_t(1001,'Jane Smith',(SELECT REF(d) FROM Dept d WHERE d.dno=11),60000));
+INSERT INTO Emp VALUES(Emp_t(1002,'Jane Smith',(SELECT REF(d) FROM Dept d WHERE d.dno=12),70000));
+
+UPDATE Dept d SET d.mgr=(SELECT REF(e) FROM Emp e WHERE e.eno=1000)WHERE d.dno=10;
+UPDATE Dept d SET d.mgr=(SELECT REF(e) FROM Emp e WHERE e.eno=1001)WHERE d.dno=11;
+UPDATE Dept d SET d.mgr=(SELECT REF(e) FROM Emp e WHERE e.eno=1002)WHERE d.dno=12;
+
+INSERT INTO Proj VALUES (100, 'Project A', (SELECT REF(d) FROM Dept d WHERE dno = 10), 100000.00);
+INSERT INTO Proj VALUES (101, 'Project B', (SELECT REF(d) FROM Dept d WHERE dno = 11), 150000.00);
+INSERT INTO Proj VALUES (102, 'Project C', (SELECT REF(d) FROM Dept d WHERE dno = 12), 200000.00);
+
+
+select d.dno , d.mgr.ename AS ManagerName, d.mgr.salary AS Manager_salary 
+from Dept d;
+
+
+select p.pname, p.pdept.mgr.ename AS ManagerofDep_inCharge 
+from  Proj p 
+where p.budget > 50000;
+
+
+select p.pdept.dno, p.pdept.dname, sum(p.budget) AS Total_budget 
+from Proj p 
+Group by p.pdept.dno, p.pdept.dname;
+
+
+SELECT p.pdept.mgr.ename 
+FROM Proj p 
+WHERE p.budget IN (SELECT MAX(p2.budget) FROM Proj p2);
+
+
+SELECT p.pdept.mgr.eno, SUM(p.budget) 
+FROM Proj p 
+GROUP BY p.pdept.mgr.eno 
+HAVING SUM(p.budget) > 60000;
+
+
+select p.pdept.mgr.eno,SUM(p.budget) 
+from Proj p 
+where p.pdept.mgr.eno=(select p.pdept.mgr.eno 
+                        from Proj p 
+                        where p.budget = (select MAX(p.budget) 
+                                        from Proj p)) 
+group by p.pdept.mgr.eno;

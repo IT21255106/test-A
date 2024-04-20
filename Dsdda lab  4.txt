@@ -1,0 +1,201 @@
+
+
+
+CREATE TABLE stocks ( 
+    companyname VARCHAR2(50), 
+    current_price NUMBER(6,2) 
+);
+
+INSERT INTO stocks (companyname, current_price) VALUES ('IBM', 150.25);
+INSERT INTO stocks (companyname, current_price) VALUES ('AAPL', 200.50);
+INSERT INTO stocks (companyname, current_price) VALUES ('GOOGL', 3000.75);
+INSERT INTO stocks (companyname, current_price) VALUES ('MSFT', 250.80);
+
+
+1)
+DECLARE
+    var_cname varchar(12) := 'IBM';
+	var_cprice number(6,2);
+BEGIN
+    SELECT S.current_price INTO var_cprice
+    FROM stocks S
+    WHERE S.companyname = var_cname;
+	DBMS_OUTPUT.PUT_LINE('Current price of IBM stock : ' || var_cprice);
+END;
+/
+
+
+2)
+DECLARE
+    var_cname varchar(12) := 'IBM';
+    var_cprice number(6,2);
+BEGIN
+    SELECT S.current_price INTO var_cprice
+    FROM stocks S
+    WHERE S.companyname = var_cname;
+
+    IF var_cprice < 45 THEN
+        DBMS_OUTPUT.PUT_LINE('Current price is very low !');
+    ELSIF var_cprice >= 45 AND var_cprice < 55 THEN
+        DBMS_OUTPUT.PUT_LINE('Current price is low !');
+    ELSIF var_cprice >= 55 AND var_cprice < 65 THEN
+        DBMS_OUTPUT.PUT_LINE('Current price is medium !');
+    ELSIF var_cprice >= 65 AND var_cprice < 75 THEN
+        DBMS_OUTPUT.PUT_LINE('Current price is medium high !');
+    ELSE
+        DBMS_OUTPUT.PUT_LINE('Current price is high !');
+    END IF;
+END;
+/
+
+
+
+3)
+DECLARE
+    i NUMBER := 9;
+	j NUMBER;
+BEGIN
+    LOOP
+        DBMS_OUTPUT.PUT(' ');
+        FOR j IN 1..i LOOP
+            DBMS_OUTPUT.PUT(i || ' ');
+        END LOOP;
+        DBMS_OUTPUT.PUT_LINE('');
+        i := i - 1;
+        EXIT WHEN i < 1;
+    END LOOP;
+END;
+/
+
+
+
+
+DECLARE
+    i NUMBER := 9;
+BEGIN
+    WHILE i >= 1 LOOP
+        FOR j IN 1..i LOOP
+            DBMS_OUTPUT.PUT(i || ' ');
+        END LOOP;
+        DBMS_OUTPUT.PUT_LINE('');
+        i := i - 1;
+    END LOOP;
+END;
+/
+
+
+
+DECLARE
+BEGIN
+    FOR i IN REVERSE 1..9 LOOP
+        FOR j IN 1..i LOOP
+            DBMS_OUTPUT.PUT(i || ' ');
+        END LOOP;
+        DBMS_OUTPUT.PUT_LINE('');
+    END LOOP;
+END;
+/
+    
+
+4)
+DECLARE
+   client_name VARCHAR(20);
+   CURSOR client_cursor IS
+      SELECT c.name
+      FROM clients c;
+
+BEGIN
+   FOR client_rec IN client_cursor LOOP
+      FOR purchase_rec IN (
+         SELECT i.purchasedate, i.qty
+         FROM TABLE (
+            SELECT c.investments
+            FROM clients c
+            WHERE c.name = client_rec.name
+         ) i
+      ) LOOP
+         IF purchase_rec.purchasedate < TO_DATE('01-JAN-2000', 'DD-MON-YYYY') THEN
+            UPDATE TABLE (
+               SELECT c.investments
+               FROM clients c
+               WHERE c.name = client_rec.name
+            ) i
+            SET i.qty = i.qty + 150
+            WHERE i.purchasedate = purchase_rec.purchasedate;
+         ELSIF purchase_rec.purchasedate < TO_DATE('01-JAN-2001', 'DD-MON-YYYY') THEN
+            UPDATE TABLE (
+               SELECT c.investments
+               FROM clients c
+               WHERE c.name = client_rec.name
+            ) i
+            SET i.qty = i.qty + 100
+            WHERE i.purchasedate = purchase_rec.purchasedate;
+         ELSIF purchase_rec.purchasedate < TO_DATE('01-JAN-2002', 'DD-MON-YYYY') THEN
+            UPDATE TABLE (
+               SELECT c.investments
+               FROM clients c
+               WHERE c.name = client_rec.name
+            ) i
+            SET i.qty = i.qty + 50
+            WHERE i.purchasedate = purchase_rec.purchasedate;
+         END IF;
+      END LOOP;
+   END LOOP;
+END;
+/
+
+
+SELECT c.name AS client_name, i.qty
+FROM clients c
+JOIN TABLE(c.investments) i
+ON c.name = 'Jill Brody'
+ORDER BY c.name;
+
+
+5)
+DECLARE
+   client_name   VARCHAR(20);
+   CURSOR client_cursor IS
+      SELECT c.name
+      FROM clients c;
+   purchase_date DATE;
+   quantity NUMBER;
+
+BEGIN
+   FOR client_rec IN client_cursor LOOP
+      client_name := client_rec.name;
+      FOR investment_rec IN (
+         SELECT i.purchasedate, i.qty
+         FROM TABLE (
+            SELECT c.investments
+            FROM clients c
+            WHERE c.name = client_name
+         ) i
+      ) LOOP
+         purchase_date := investment_rec.purchasedate;
+         quantity := investment_rec.qty;
+         IF purchase_date < TO_DATE('01-JAN-2000', 'DD-MON-YYYY') THEN
+            quantity := quantity + 150;
+         ELSIF purchase_date < TO_DATE('01-JAN-2001', 'DD-MON-YYYY') THEN
+            quantity := quantity + 100;
+         ELSIF purchase_date < TO_DATE('01-JAN-2002', 'DD-MON-YYYY') THEN
+            quantity := quantity + 50;
+         END IF;
+         UPDATE TABLE (
+            SELECT c.investments
+            FROM clients c
+            WHERE c.name = client_name
+         ) i
+         SET i.qty = quantity
+         WHERE i.purchasedate = purchase_date;
+      END LOOP;
+   END LOOP;
+END;
+/
+
+
+SELECT c.name AS client_name, i.qty
+FROM clients c
+JOIN TABLE(c.investments) i
+ON c.name = 'Jill Brody'
+ORDER BY c.name;
